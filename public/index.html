@@ -1,37 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrustVault - Secure Document Manager</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f4f6f9; }
-        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input, button { display: block; width: 100%; margin: 10px 0; padding: 10px; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        h2 { margin-top: 0; }
-    </style>
-</head>
-<body>
-
-    <div class="card">
-        <h2>TrustVault Login / Register</h2>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="register()">Register</button>
-        <button onclick="login()">Login</button>
-        <p id="auth-status" style="color: green;"></p>
-    </div>
-
-    <div class="card" id="upload-section" style="display:none;">
-        <h2>Upload Document</h2>
-        <input type="file" id="fileInput">
-        <button onclick="uploadFile()">Upload</button>
-        <p id="upload-status"></p>
-    </div>
-
-    <script>
+<script>
         let token = "";
 
         async function register() {
@@ -40,10 +7,10 @@
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ name: username, email: username, password: password, role: 'owner' })
             });
             const data = await res.json();
-            alert(data.message || "Registered successfully!");
+            alert(data.message || data.error || "Registered successfully!");
         }
 
         async function login() {
@@ -52,7 +19,7 @@
             const res = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ email: username, password: password })
             });
             const data = await res.json();
             if (data.token) {
@@ -60,14 +27,16 @@
                 document.getElementById('auth-status').innerText = "Logged in successfully!";
                 document.getElementById('upload-section').style.display = "block";
             } else {
-                alert("Login failed!");
+                alert(data.error || "Login failed!");
             }
         }
 
         async function uploadFile() {
             const fileInput = document.getElementById('fileInput');
             const formData = new FormData();
-            formData.append('document', fileInput.files[0]);
+            formData.append('file', fileInput.files[0]);
+            formData.append('title', 'Sample Document');
+            formData.append('category', 'General');
 
             const res = await fetch('/api/documents', {
                 method: 'POST',
@@ -75,8 +44,6 @@
                 body: formData
             });
             const data = await res.json();
-            document.getElementById('upload-status').innerText = "File uploaded successfully!";
+            document.getElementById('upload-status').innerText = data.message || "File uploaded successfully!";
         }
-    </script>
-</body>
-</html>
+    
