@@ -1,49 +1,33 @@
 <script>
-        let token = "";
+    let token = "";
 
-        async function register() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: username, email: username, password: password, role: 'owner' })
-            });
-            const data = await res.json();
-            alert(data.message || data.error || "Registered successfully!");
+    async function register() {
+        const email = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: email.split('@')[0] || "User", email: email, password: password, role: 'owner' })
+        });
+        const data = await res.json();
+        alert(data.message || data.error || "Registered!");
+    }
+
+    async function login() {
+        const email = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: password })
+        });
+        const data = await res.json();
+        if (data.token) {
+            token = data.token;
+            document.getElementById('auth-status').innerText = "Logged in successfully!";
+            document.getElementById('upload-section').style.display = "block";
+        } else {
+            alert(data.error || "Login failed!");
         }
-
-        async function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: username, password: password })
-            });
-            const data = await res.json();
-            if (data.token) {
-                token = data.token;
-                document.getElementById('auth-status').innerText = "Logged in successfully!";
-                document.getElementById('upload-section').style.display = "block";
-            } else {
-                alert(data.error || "Login failed!");
-            }
-        }
-
-        async function uploadFile() {
-            const fileInput = document.getElementById('fileInput');
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            formData.append('title', 'Sample Document');
-            formData.append('category', 'General');
-
-            const res = await fetch('/api/documents', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            const data = await res.json();
-            document.getElementById('upload-status').innerText = data.message || "File uploaded successfully!";
-        }
-    
+    }
+</script>
