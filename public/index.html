@@ -106,9 +106,9 @@
         });
         const data = await res.json();
         
-        if (data.token) {
+        if (res.ok && data.token) {
             authToken = data.token;
-            userRole = data.role;
+            userRole = data.role || 'owner';
             const statusEl = document.getElementById('auth-status');
             statusEl.style.color = "green";
             statusEl.innerText = `Logged in successfully as [${userRole.toUpperCase()}]`;
@@ -123,7 +123,6 @@
             alert(data.error || "Login failed!");
         }
     }
-
     async function uploadFile() {
         const title = document.getElementById('title').value;
         const category = document.getElementById('category').value;
