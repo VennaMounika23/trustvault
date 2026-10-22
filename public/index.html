@@ -28,7 +28,7 @@
     <div id="auth-section">
         <div class="form-group">
             <label for="email">Email Address</label>
-            <input type="email" id="email" placeholder="Enter your email">
+            <input type="email" id="email" placeholder="Enter your email" value="vennamounika2005@gmail.com">
         </div>
         <div class="form-group">
             <label for="password">Password</label>
@@ -47,7 +47,7 @@
         <p id="auth-status"></p>
     </div>
 
-    <!-- Document Upload Section (Hidden until logged in) -->
+    <!-- Document Upload Section -->
     <div id="upload-section" class="section" style="display: none;">
         <h3>Upload Secure Document</h3>
         <div class="form-group">
@@ -81,13 +81,21 @@
             return;
         }
 
-        const res = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: email.split('@')[0], email: email, password: password, role: role })
-        });
-        const data = await res.json();
-        alert(data.message || data.error);
+        try {
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: email.split('@')[0], email: email, password: password, role: role })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert("Registered successfully! Now you can log in.");
+            } else {
+                alert(data.error || "Registration failed.");
+            }
+        } catch (err) {
+            alert("Network error during registration.");
+        }
     }
 
     async function login() {
@@ -99,30 +107,35 @@
             return;
         }
 
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email, password: password })
-        });
-        const data = await res.json();
-        
-        if (res.ok && data.token) {
-            authToken = data.token;
-            userRole = data.role || 'owner';
-            const statusEl = document.getElementById('auth-status');
-            statusEl.style.color = "green";
-            statusEl.innerText = `Logged in successfully as [${userRole.toUpperCase()}]`;
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password })
+            });
+            const data = await res.json();
             
-            if (userRole === 'viewer') {
-                document.getElementById('upload-section').style.display = "none";
-                alert("Logged in as Viewer. Upload restricted by RBAC rules.");
+            if (res.ok && data.token) {
+                authToken = data.token;
+                userRole = data.role || 'owner';
+                const statusEl = document.getElementById('auth-status');
+                statusEl.style.color = "green";
+                statusEl.innerText = `Logged in successfully as [${userRole.toUpperCase()}]`;
+                
+                if (userRole === 'viewer') {
+                    document.getElementById('upload-section').style.display = "none";
+                    alert("Logged in as Viewer. Upload restricted by RBAC rules.");
+                } else {
+                    document.getElementById('upload-section').style.display = "block";
+                }
             } else {
-                document.getElementById('upload-section').style.display = "block";
+                alert(data.error || "Login failed!");
             }
-        } else {
-            alert(data.error || "Login failed!");
+        } catch (err) {
+            alert("Network error during login.");
         }
     }
+
     async function uploadFile() {
         const title = document.getElementById('title').value;
         const category = document.getElementById('category').value;

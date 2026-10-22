@@ -10,12 +10,13 @@ const db = require('./database');
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// Static files middleware (Frontend UI serve cheyadaniki)
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = 'trustvault_secret_key_2026';
 
-// Uploads folder create cheyadam
 const uploadDir = './uploads';
 if (!fs.existsSync(uploadDir)){
     fs.mkdirSync(uploadDir);
@@ -31,7 +32,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// JWT Verification Middleware
 function verifyToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -44,11 +44,6 @@ function verifyToken(req, res, next) {
         next();
     });
 }
-
-// Test Route
-app.get('/', (req, res) => {
-    res.json({ message: "TrustVault API is running!" });
-});
 
 // 1. REGISTER API
 app.post('/api/register', async (req, res) => {
@@ -121,45 +116,6 @@ app.post('/api/documents', verifyToken, upload.single('file'), (req, res) => {
         }
     );
 });
-
-// 4. SECURE DOCUMENT VIEW/DOWNLOAD API
-app.get('/api/documents/:id', verifyToken, (req, res) => {
-    const documentId = req.params.id;
-    const userId = req.user.id;
-    const userRole = req.user.role;
-
-    if (userRole === 'admin') {
-        return sendDocument(documentId, userId, 'success', res);
-    }
-
-    db.get(`SELECT * FROM documents WHERE id = ? AND owner_id = ?`, [documentId, userId], (err, doc) => {
-        if (doc) {
-            return sendDocument(documentId, userId, 'success', res);
-        }
-
-        db.get(`SELECT * FROM permissions WHERE document_id = ? AND user_id = ?`, [documentId, userId], (err, perm) => {
-            if (perm) {
-                return sendDocument(documentId, userId, 'success', res);
-            } else {
-                db.run(`INSERT INTO audit_logs (user_id, action, document_id, status) VALUES (?, ?, ?, ?)`,
-                    [userId, 'VIEW', documentId, 'blocked']);
-                return res.status(403).json({ error: "Access Denied: You do not have permission to view this document." });
-            }
-        });
-    });
-});
-
-function sendDocument(documentId, userId, status, res) {
-    db.get(`SELECT * FROM documents WHERE id = ?`, [documentId], (err, doc) => {
-        if (err || !doc) return res.status(404).json({ error: "Document not found" });
-
-        db.run(`INSERT INTO audit_logs (user_id, action, document_id, status) VALUES (?, ?, ?, ?)`,
-            [userId, 'VIEW', documentId, status]);
-
-        const filePath = path.join(__dirname, 'uploads', doc.filename);
-        res.download(filePath, doc.title);
-    });
-}
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
