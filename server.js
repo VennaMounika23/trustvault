@@ -10,6 +10,7 @@ const db = require('./database');
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = 'trustvault_secret_key_2026';
