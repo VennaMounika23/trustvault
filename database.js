@@ -1,58 +1,46 @@
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const path = require('path');
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database', err.message);
-    } else {
-        console.log('Connected to SQLite database.');
-        createTables();
-    }
-});
+const dbPath = path.resolve(__dirname, 'trustvault.db');
+const db = new Database(dbPath);
 
-function createTables() {
-    db.serialize(() => {
-        // Users Table
-        db.run(`CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT CHECK(role IN ('admin', 'owner', 'viewer')) NOT NULL
-        )`);
+// Tables create cheyadam
+db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        email TEXT UNIQUE,
+        password TEXT,
+        role TEXT
+    );
 
-        // Documents Table
-        db.run(`CREATE TABLE IF NOT EXISTS documents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            filename TEXT NOT NULL,
-            category TEXT NOT NULL,
-            owner_id INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(owner_id) REFERENCES users(id)
-        )`);
+    CREATE TABLE IF NOT EXISTS documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        filename TEXT,
+        category TEXT,
+        owner_id INTEGER,
+        FOREIGN KEY(owner_id) REFERENCES users(id)
+    );
 
-        // Permissions Table
-        db.run(`CREATE TABLE IF NOT EXISTS permissions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            document_id INTEGER,
-            user_id INTEGER,
-            access_type TEXT CHECK(access_type IN ('read', 'edit')) NOT NULL,
-            FOREIGN KEY(document_id) REFERENCES documents(id) ON DELETE CASCADE,
-            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-        )`);
+    CREATE TABLE IF NOT EXISTS permissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        document_id INTEGER,
+        user_id INTEGER,
+        FOREIGN KEY(document_id) REFERENCES documents(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
 
-        // Audit Logs Table
-        db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            action TEXT NOT NULL,
-            document_id INTEGER,
-            status TEXT CHECK(status IN ('success', 'blocked')) NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
-    });
-}
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        action TEXT,
+        document_id INTEGER,
+        status TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(document_id) REFERENCES documents(id)
+    );
+`);
 
 module.exports = db;
