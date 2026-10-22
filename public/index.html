@@ -1,33 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustVault - Secure Document Management</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2, h3 { color: #333; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; background-color: #007bff; color: white; border: none; padding: 10px; border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        button:hover { background-color: #0056b3; }
+        .btn-green { background-color: #28a745; }
+        .btn-green:hover { background-color: #218838; }
+        .section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        #auth-status, #upload-status { margin-top: 15px; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>TrustVault Secure Portal</h2>
+
+    <!-- Authentication Section -->
+    <div id="auth-section">
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" placeholder="Enter your email">
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter your password">
+        </div>
+        <div class="form-group" id="role-group">
+            <label for="role">Role (Required for Registration)</label>
+            <select id="role">
+                <option value="owner">Owner (Can Upload & View)</option>
+                <option value="viewer">Viewer (View Only - No Upload)</option>
+                <option value="admin">Admin (Full Access)</option>
+            </select>
+        </div>
+        <button onclick="register()" class="btn-green">Register</button>
+        <button onclick="login()">Login</button>
+        <p id="auth-status"></p>
+    </div>
+
+    <!-- Document Upload Section (Hidden until logged in) -->
+    <div id="upload-section" class="section" style="display: none;">
+        <h3>Upload Secure Document</h3>
+        <div class="form-group">
+            <label for="title">Document Title</label>
+            <input type="text" id="title" placeholder="Enter document title">
+        </div>
+        <div class="form-group">
+            <label for="category">Category</label>
+            <input type="text" id="category" placeholder="e.g. Finance, Legal, HR">
+        </div>
+        <div class="form-group">
+            <label for="fileInput">Select File</label>
+            <input type="file" id="fileInput">
+        </div>
+        <button onclick="uploadFile()">Upload Document</button>
+        <p id="upload-status"></p>
+    </div>
+</div>
+
 <script>
-    let token = "";
+    let authToken = "";
+    let userRole = "";
 
     async function register() {
-        const email = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+        const role = document.getElementById('role').value;
+        
+        if (!email || !password || !role) {
+            alert("All fields are required for registration.");
+            return;
+        }
+
         const res = await fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: email.split('@')[0] || "User", email: email, password: password, role: 'owner' })
+            body: JSON.stringify({ name: email.split('@')[0], email: email, password: password, role: role })
         });
         const data = await res.json();
-        alert(data.message || data.error || "Registered!");
+        alert(data.message || data.error);
     }
 
     async function login() {
-        const email = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+
+        if (!email || !password) {
+            alert("Please enter both email and password.");
+            return;
+        }
+
         const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email, password: password })
         });
         const data = await res.json();
+        
         if (data.token) {
-            token = data.token;
-            document.getElementById('auth-status').innerText = "Logged in successfully!";
-            document.getElementById('upload-section').style.display = "block";
+            authToken = data.token;
+            userRole = data.role;
+            const statusEl = document.getElementById('auth-status');
+            statusEl.style.color = "green";
+            statusEl.innerText = `Logged in successfully as [${userRole.toUpperCase()}]`;
+            
+            if (userRole === 'viewer') {
+                document.getElementById('upload-section').style.display = "none";
+                alert("Logged in as Viewer. Upload restricted by RBAC rules.");
+            } else {
+                document.getElementById('upload-section').style.display = "block";
+            }
         } else {
             alert(data.error || "Login failed!");
         }
     }
+
+    async function uploadFile() {
+        const title = document.getElementById('title').value;
+        const category = document.getElementById('category').value;
+        const fileInput = document.getElementById('fileInput');
+
+        if (!title || !category || fileInput.files.length === 0) {
+            alert("Title, category, and a file are required!");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('title', title);
+        formData.append('category', category);
+
+        const res = await fetch('/api/documents', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}` },
+            body: formData
+        });
+        const data = await res.json();
+        
+        const statusEl = document.getElementById('upload-status');
+        if (res.ok) {
+            statusEl.style.color = "green";
+            statusEl.innerText = data.message;
+        } else {
+            statusEl.style.color = "red";
+            statusEl.innerText = data.error || "Upload failed!";
+        }
+    }
 </script>
+
+</body>
+</html>
